@@ -1,0 +1,200 @@
+特征选择：
+方差选择法：删除低方差特征（比如：删除相关性比较高的变量，留下易于区分不同种类的变量）
+相关系数：
+ 
+计算某两个变量之间的相关系数的API:
+From scipy.stats import pearsonr(皮尔逊)
+X:(N,)array_like
+Y：（N,）array_like Returns:(Pearson’s correlation coefficient,p-value)
+
+"""计算某两个变量之间的相关系数"""
+r = pearsonr(data["market_cap"],data["pb_ratio"])
+print("相关系数：\n", r)
+"""相关系数：
+ PearsonRResult(statistic=-0.004389322779936275, pvalue=0.8327205496590723)
+ 后面那个是p值 前面的是相关系数"""
+
+
+"""循环计算每两个变量之间的相关系数"""
+"""读取数据"""
+data=pd.read_csv("factor_returns.csv")
+
+factor=['pb_ratio','market_cap','return_on_asset_net_profit','du_return_on_equity','ev','earnings_per_share','revenue','total_expense']
+
+for i in range(len(factor)):
+    for j in range(i,len(factor)-1):
+        print(factor[i])
+        print(factor[j])
+        print(pearsonr(data[factor[i]],data[factor[j]]))
+
+"""画图来观察结果"""
+plt.figure(figsize=(20,8) ,dpi=100)
+plt.scatter(data['revenue'],data['total_expense'])
+plt.show()
+
+ 
+
+主成分分析（PCA）
+定义：高维数据转化为低维数据的过程，在此过程中可能会舍弃原有数据、创造新的变量。
+作用：是数据维数压缩，尽可能降低原数据的维数（复杂度），损失少量信息。
+应用：回归分析或聚类分析中
+例如：生活中的水壶是三维的，如果拍摄成二维照片，属于降维过程，但又要从照片中得知拍的是什么（属于降低维度的同时要损失少量的信息），由此推出三维的实物
+理解：PCA是一种数据降维的技术，它并不是将数据拟合到一个模型中，而是通过线性变换将原始的高维数据投影到一个低维的子空间中，使得投影后的数据仍然尽可能地保留原始数据的信息，同时减少了特征的数量和减少了冗余信息
+API:
+sklearn.decomposition.PCA(n_components=None)
+。将数据分解为较低维数空间
+。 n_components:
+ .小数：表示保留百分之多少的信息（0-1）
+     	 .整数：减少到多少特征（3—>2 表示由三维降到二维）
+。PCA.fit_transform(X)
+ X:numpy array格式的数据 [n_samples,n_features]
+。返回值：转换后指定维度的array
+
+案例：探究用户对物品类别的喜好细分降维
+目标：找到用户与物品类别之间的关系
+但是用户与物品类别不在同一表中，所以要把两张表进行合并，找到user_id和aisle交叉表和透视表（数据挖掘），同时要注意特征冗余过多，要进行降维
+（jupyter是很好的处理数据软件）
+from sklearn.decomposition import PCA
+import pandas as pd
+
+#1.获取数据
+order_products=pd.read_csv("order_products__prior.csv")
+products=pd.read_csv("products.csv")
+orders=pd.read_csv("orders.csv")
+aisles=pd.read_csv("aisles.csv")
+#order_products
+
+#合并aisles和produces表
+tab1=pd.merge(aisles,products,on=["aisle_id","aisle_id"])
+#tab1
+tab2=pd.merge(tab1,order_products,on=["product_id","product_id"])
+#tab2
+tab3=pd.merge(tab2,orders,on=["order_id","order_id"])
+#tab3
+
+#2.# 找到user_id和aisle之间的关系
+table=pd.crosstab(tab3["user_id"],tab3["aisle"])
+#tab3.head()#.head()查看前5行
+#table
+#把所有数据按照次数输出？？？
+
+#降维 减少数据量 使用PCA
+#降维的意义：去除冗余数据，去除相关性近似数据等
+data=table[:10000]
+#实例化一个转化器类
+transfer=PCA(n_components=0.95)
+#调用fit_transfer
+data_new=transfer.fit_transform(data)
+data_new
+
+注：目标值类型 是类型 为 分类算法；目标值为离散型连续数据的，是回归算法
+
+分类算法：
+	有目标值：目标值是类别：分类算法
+大纲：
+1.	sklearn转换器和预估器
+2.	KNN算法
+3.	模型选择与调优
+4.	朴素贝叶斯算法
+5.	决策树
+6.	随机森林
+sklearn转换器和预估器
+转换器（特征工程的父类）：
+特征工程的步骤：
+1.实例化（实例化的是一个转换器类（transformer））
+2.调用fit_transform（对于文档建立分类词频矩阵，不能同时调用）
+注：fit_transform是fit()和transform（）两个方法封装而成，fit()用于先计算每一列的平均值 标准差 
+transform（）用于（x-mean）/std进行最终的转换
+我们把特种工程的接口称之为转换器，其中转换器调用有这么几种形式：
+		Fit()  transform（）fit_transform（）
+	
+     估计器(sklearn机器学习算法的实现)：
+			在sklearn中，估计器（estimator）是一个重要的角色，是一类实现了算法的API（接口）
+			1用于分类的估计器：
+sklearn.neighbors k-近邻算法
+sklearn.naive_bayes 贝叶斯
+sklearn.linear_model.LogisticRegression 逻辑回归sklearn.tree 决策树与随机森林
+2用于回归的估计器：
+sklearn.linear_model.LinearRegression线性回归sklearn.linear_model.Ridge岭回归
+3用于无监督学习的估计器
+sklearn.cluster.KMeans 聚类
+
+步骤：
+1.	实例化一个estimator
+2.	Estimator.fit(x_train,y_train) 计算调用完毕 模型生成
+x_train,y_train：训练集
+3.	 模型评估：
+（1）	直接比对真实值和预测值
+Y_predict=estimator.predict(x_test)   预测结果
+Y_test==y_predict
+（x_test,y_test）:测试集
+		(2)   计算准确率,结果精度
+			Estimator.score(x_test,y_test)
+
+KNN算法（K-近邻算法）
+	K ：常数 N：最近的 N：邻居
+引入：有一张北京的地图，我想知道我在哪个区，属于分类算法，虽然不知道我在哪个区，但是知道我与其他几人的距离（根据你的“邻居“来推断出你的类别）
+ 
+定义：如果一个样本在特征值空间中k个最相似（即特征空间中最邻近）的样本中的大多数属于某一个类别，则该样本也属于这个类别
+距离公式：两个样本的距离公式可以通过如下公式计算，又叫欧式距离
+ 
+曼哈顿距离 == 绝对值距离
+明可夫斯基距离
+ 
+KNN算法中的k可以取任意值 比如k=2,就看满足条件的两个值
+K值取得过大，会受到样本不均衡的影响
+K值取得过小，会受到异常值的影响
+
+	进行K-近邻算法之前，先进行无量纲化的处理：
+		标准化处理
+
+K-近邻算法API:
+ 	
+sklearn.neighbors.KNeighborsClassifier(n_neighbors=5,algorithm='auto')
+n_neighbors:int，可选（默认=5），k_neighbors查询默认使用的邻居数algorithm:('auto’, "ball_tree', ‘kd_tree', "brute')，可选用于计算最近邻居的算法："ball_tree'将会使用 BallTree，‘kd_tree'将使用KDTree。‘auto”将尝试根据传递给fit方法的值来决定最合适的算法。(不同实现方式影响效率)
+注：n_neighborsk近邻中的k值
+
+案例：鸢尾花种类预测：
+ 
+
+流程分析：
+1）	获取数据
+2）	数据集划分（训练集 测试集）
+3）	特征工程
+标准化
+4）	KNN预估器流程
+5）	模型评估
+
+	"""用KNN算法 对鸢尾花进行分类"""
+from sklearn.datasets import load_iris
+from sklearn.model_selection import train_test_split
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.preprocessing import StandardScaler
+
+# 1）    获取数据
+iris = load_iris()
+# 2）    数据集划分（训练集 测试集）
+x_train, x_test, y_train, y_test = train_test_split(iris.data, iris.target, random_state=6)
+print(x_train)
+print(x_test)
+print(y_train)
+print(y_test)
+# y_train是目标值，也就是类别 不能标准化
+# 3）    特征工程:标准化 训练集和测试集都需要标准化
+transfer = StandardScaler()
+x_train = transfer.fit_transform(x_train)
+x_test = transfer.transform(x_test)
+
+# 4）    KNN预估器流程
+estimator = KNeighborsClassifier(n_neighbors=3)
+estimator.fit(x_train, y_train)
+
+# 5）    模型评估
+# 方法一：直接比对真实值和预测值
+y_predict = estimator.predict(x_test)
+print("y_predict：\n", y_predict)
+print("比对真实值和预测值:\n", y_test == y_predict)
+# 方法二：计算准确率
+score = estimator.score(x_test, y_test)
+print("准确率为：\n", score)
+	
